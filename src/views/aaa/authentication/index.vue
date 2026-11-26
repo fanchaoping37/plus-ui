@@ -24,7 +24,7 @@
       <el-form label-width="135px">
         <el-form-item label="Provider ID"><el-input v-model="providerForm.providerId" maxlength="64" /></el-form-item><el-form-item label="版本"><el-input v-model="providerForm.providerVersion" maxlength="64" placeholder="例如 1.0.0" /></el-form-item>
         <el-form-item label="显示名称"><el-input v-model="providerForm.displayName" maxlength="128" /></el-form-item>
-        <el-form-item label="Provider 类型"><el-select v-model="providerForm.providerType" style="width: 100%"><el-option v-for="item in providerTypes" :key="item" :label="item" :value="item" /></el-select></el-form-item>
+        <el-form-item label="Provider 类型"><el-select v-model="providerForm.providerType" style="width: 100%" @change="applyProviderTemplate"><el-option v-for="item in providerTypes" :key="item" :label="item" :value="item" /></el-select></el-form-item>
         <el-form-item label="JSON 配置"><el-input v-model="providerConfigText" type="textarea" :rows="12" /></el-form-item>
       </el-form>
       <template #footer><el-button @click="providerVisible = false">取消</el-button><el-button type="primary" @click="submitProvider">创建草稿</el-button></template>
@@ -67,6 +67,30 @@ async function refresh() {
     if (activeTab.value === 'providers') { const res = await listAuthProviders(); providers.value = res.data ?? []; }
     else { const [p, a] = await Promise.all([listAuthPolicies(), listAuthProviders()]); policies.value = p.data ?? []; providers.value = a.data ?? []; }
   } finally { loading.value = false; }
+}
+function applyProviderTemplate(type: ProviderType) {
+  if (type === 'UPSTREAM_RADIUS') {
+    providerConfigText.value = JSON.stringify({
+      serverHost: '192.0.2.10',
+      serverPort: 1812,
+      serverSecretRef: 'upstream-radius-default',
+      userCredentialAlias: 'default',
+      timeoutMillis: 3000,
+      messageAuthenticator: true,
+      nasIdentifier: 'radius-aaa',
+      authenticationMode: 'UPSTREAM_ONLY',
+      upstreamUsernameTemplate: '{username}',
+      allowCampusUsernameCampusPassword: false,
+      allowCampusUsernameOperatorPassword: false,
+      allowOperatorUsernameOperatorPassword: true,
+      allowOperatorUsernameCampusPassword: false,
+      allowUnboundLocalAuthentication: false
+    }, null, 2);
+  } else if (type === 'LOCAL_CREDENTIAL') {
+    providerConfigText.value = '{}';
+  } else {
+    providerConfigText.value = '{}';
+  }
 }
 function openProvider() { Object.assign(providerForm, { providerId: '', providerVersion: '1.0.0', displayName: '', providerType: 'LOCAL_CREDENTIAL' }); providerConfigText.value = '{}'; providerVisible.value = true; }
 async function submitProvider() {
