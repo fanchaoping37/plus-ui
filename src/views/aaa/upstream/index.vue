@@ -49,8 +49,8 @@
         <el-form-item label="来源 IP"><el-input v-model="clientForm.sourceAddress" placeholder="明确 IPv4 / IPv6 地址，不支持 CIDR" /></el-form-item>
         <el-form-item label="来源 UDP 端口"><el-input-number v-model="clientForm.sourcePort" :min="1" :max="65535" /></el-form-item>
         <el-form-item label="Secret Reference ID"><el-input v-model="clientForm.secretReferenceId" maxlength="128" /></el-form-item>
-        <el-form-item label="生效时间"><el-date-picker v-model="clientForm.effectiveFrom" type="datetime" value-format="YYYY-MM-DDTHH:mm:ss[Z]" /></el-form-item>
-        <el-form-item label="失效时间"><el-date-picker v-model="clientForm.effectiveUntil" type="datetime" value-format="YYYY-MM-DDTHH:mm:ss[Z]" /></el-form-item>
+        <el-form-item label="生效时间"><el-date-picker v-model="clientForm.effectiveFrom" type="datetime" value-format="YYYY-MM-DDTHH:mm:ssZ" /></el-form-item>
+        <el-form-item label="失效时间"><el-date-picker v-model="clientForm.effectiveUntil" type="datetime" value-format="YYYY-MM-DDTHH:mm:ssZ" /></el-form-item>
       </el-form>
       <template #footer><el-button @click="clientVisible = false">取消</el-button><el-button type="primary" :loading="saving" @click="saveClient">保存</el-button></template>
     </el-dialog>
