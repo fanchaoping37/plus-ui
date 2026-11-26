@@ -22,9 +22,9 @@
         <el-table-column label="配置版本" prop="configVersion" width="100" />
         <el-table-column label="操作" fixed="right" width="300">
           <template #default="{ row }">
-            <el-button v-hasPermi="['aaa:nas:secret:rotate']" link type="primary" @click="generateSecret(row)">生成 Secret</el-button>
-            <el-button v-hasPermi="['aaa:nas:secret:rotate']" link type="primary" @click="openRotate(row)">轮换 Secret</el-button>
-            <el-button v-hasPermi="['aaa:nas:edit']" link type="warning" @click="toggleStatus(row)">{{ row.status === 'ENABLED' ? '停用' : '启用' }}</el-button>
+            <el-button v-hasPermi="['aaa:nas:secret:rotate']" link type="primary"  :disabled="!canManageNas(row)" @click="generateSecret(row)">生成 Secret</el-button>
+            <el-button v-hasPermi="['aaa:nas:secret:rotate']" link type="primary"  :disabled="!canManageNas(row)" @click="openRotate(row)">轮换 Secret</el-button>
+            <el-button v-hasPermi="['aaa:nas:edit']" link type="warning"  :disabled="!canManageNas(row)" @click="toggleStatus(row)">{{ row.status === 'ENABLED' ? '停用' : '启用' }}</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -67,12 +67,13 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { copyText } from '@/utils/ruoyi';
 import { changeNasStatus, createNasDevice, generateNasRadiusSecret, listNasDevices, rotateNasRadiusSecret, type NasDevice, type NasDeviceCreate } from '@/api/aaa';
 
 const loading = ref(false);
 const saving = ref(false);
 const rows = ref<NasDevice[]>([]);
+function numericNasId(row: NasDevice) { return Number((row as NasDevice & { id?: number }).id ?? 0); }
+function canManageNas(row: NasDevice) { return numericNasId(row) > 0; }
 const createVisible = ref(false);
 const secretVisible = ref(false);
 const rotateVisible = ref(false);
@@ -108,12 +109,15 @@ async function submitCreate() {
 async function toggleStatus(row: NasDevice) {
   const next = row.status === 'ENABLED' ? 'DISABLED' : 'ENABLED';
   await ElMessageBox.confirm(`确认将 NAS ${row.identity} 状态改为 ${next}？`, '状态变更');
-  await changeNasStatus(Number((row as any).id ?? 0), row.configVersion, next);
+  const id = numericNasId(row);
+  if (!id) { ElMessage.warning('当前后端 NAS 列表响应未提供数值型 nasDeviceId，暂不能变更状态'); return; }
+  await changeNasStatus(id, row.configVersion, next);
   await getList();
 }
 async function generateSecret(row: NasDevice) {
   await ElMessageBox.confirm(`将为 NAS ${row.identity} 生成并立即启用新的 Shared Secret，是否继续？`, '生成密钥');
-  const id = Number((row as any).id ?? 0);
+  const id = numericNasId(row);
+  if (!id) { ElMessage.warning('当前后端 NAS 列表响应未提供数值型 nasDeviceId，暂不能生成密钥'); return; }
   const res = await generateNasRadiusSecret(id);
   oneTimeSecret.value = res.data?.secret ?? '';
   secretVisible.value = true;
@@ -123,7 +127,10 @@ function openRotate(row: NasDevice) { activeNas.value = row; rotateSecret.value 
 async function submitRotate() {
   if (!activeNas.value || !rotateSecret.value) { ElMessage.warning('请输入新的 Shared Secret'); return; }
   saving.value = true;
-  try { const secret = rotateSecret.value; rotateSecret.value = ''; await rotateNasRadiusSecret(Number((activeNas.value as any).id ?? 0), secret); ElMessage.success('Shared Secret 已轮换'); rotateVisible.value = false; await getList(); }
+  try { const secret = rotateSecret.value; rotateSecret.value = '';
+    const id = numericNasId(activeNas.value);
+    if (!id) { ElMessage.warning('当前后端 NAS 列表响应未提供数值型 nasDeviceId，暂不能轮换密钥'); return; }
+    await rotateNasRadiusSecret(id, secret); ElMessage.success('Shared Secret 已轮换'); rotateVisible.value = false; await getList(); }
   finally { rotateSecret.value = ''; saving.value = false; }
 }
 async function copySecret() { if (oneTimeSecret.value) await navigator.clipboard.writeText(oneTimeSecret.value); ElMessage.success('已复制，请安全保存'); }
