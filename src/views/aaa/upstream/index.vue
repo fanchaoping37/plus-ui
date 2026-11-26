@@ -63,7 +63,7 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 import {
   createUpstreamDynamicAuthorizationClient, createUpstreamServerSecretReference,
   disableUpstreamServerSecretReference, listAuthProviders, listUpstreamDynamicAuthorizationClientAudit,
-  listUpstreamDynamicAuthorizationClients, publishAuthProvider, rotateUpstreamServerSecretReference,
+  listUpstreamDynamicAuthorizationClients, rotateUpstreamServerSecretReference,
   setUpstreamDynamicAuthorizationClientEnabled, updateUpstreamDynamicAuthorizationClient,
   validateUpstreamDynamicAuthorizationClient, type AuthProvider, type UpstreamDynamicAuthorizationClient
 } from '@/api/aaa';
