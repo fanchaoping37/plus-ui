@@ -20,17 +20,17 @@
       </el-tabs>
     </el-card>
 
-    <el-dialog v-model="providerVisible" title="创建认证 Provider 草稿" width="760px" destroy-on-close>
+    <el-dialog v-model="providerVisible" :title="editingProvider ? '编辑认证 Provider 草稿' : '创建认证 Provider 草稿' width="760px" destroy-on-close>
       <el-form label-width="135px">
         <el-form-item label="Provider ID"><el-input v-model="providerForm.providerId" maxlength="64" /></el-form-item><el-form-item label="版本"><el-input v-model="providerForm.providerVersion" maxlength="64" placeholder="例如 1.0.0" /></el-form-item>
         <el-form-item label="显示名称"><el-input v-model="providerForm.displayName" maxlength="128" /></el-form-item>
         <el-form-item label="Provider 类型"><el-select v-model="providerForm.providerType" style="width: 100%" @change="applyProviderTemplate"><el-option v-for="item in providerTypes" :key="item" :label="item" :value="item" /></el-select></el-form-item>
-        <el-form-item label="JSON 配置"><el-input v-model="providerConfigText" type="textarea" :rows="12" /></el-form-item>
+        <el-form-item label="JSON 配置"><div class="w-full"><el-alert v-if="editingProvider" title="后端未提供配置正文读取接口；编辑时请提交完整的新配置 JSON，不能只填写差异字段。" type="warning" :closable="false" class="mb-2" /><el-input v-model="providerConfigText" type="textarea" :rows="12" /></div></el-form-item>
       </el-form>
       <template #footer><el-button @click="providerVisible = false">取消</el-button><el-button type="primary" @click="submitProvider">创建草稿</el-button></template>
     </el-dialog>
 
-    <el-dialog v-model="policyVisible" title="创建认证策略草稿" width="820px" destroy-on-close>
+    <el-dialog v-model="policyVisible" :title="editingPolicy ? '编辑认证策略草稿' : '创建认证策略草稿' width="820px" destroy-on-close>
       <el-form label-width="135px">
         <el-form-item label="策略 ID"><el-input v-model="policyForm.policyId" maxlength="64" /></el-form-item><el-form-item label="版本"><el-input v-model="policyForm.policyVersion" maxlength="64" /></el-form-item><el-form-item label="策略名称"><el-input v-model="policyForm.policyName" maxlength="128" /></el-form-item>
         <el-form-item label="优先级"><el-input-number v-model="policyForm.priority" :min="0" /></el-form-item>
@@ -98,7 +98,7 @@ function openProvider() { editingProvider.value = undefined; Object.assign(provi
 function openEditProvider(row: AuthProvider) {
   editingProvider.value = row;
   Object.assign(providerForm, { providerId: row.providerId, providerVersion: row.providerVersion, displayName: row.displayName, providerType: row.providerType });
-  providerConfigText.value = '{}';
+  applyProviderTemplate(row.providerType);
   providerVisible.value = true;
 }
 async function submitProvider() {
