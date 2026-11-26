@@ -43,7 +43,7 @@
       <template #footer><el-button @click="tagVisible = false">取消</el-button><el-button type="primary" @click="submitTag">创建</el-button></template>
     </el-dialog>
     <el-dialog v-model="memberVisible" title="设置用户组成员关系" width="520px">
-      <el-form label-width="110px"><el-form-item label="用户组"><span>{{ activeGroup?.groupName }}</span></el-form-item><el-form-item label="AAA 用户 ID"><el-input-number v-model="memberForm.userId" :min="1" /></el-form-item><el-form-item label="关系状态"><el-switch v-model="memberForm.enabled" active-text="加入" inactive-text="移除" /></el-form-item><el-form-item label="生效时间"><el-date-picker v-model="memberForm.effectiveAt" type="datetime" value-format="YYYY-MM-DDTHH:mm:ss[Z]" /></el-form-item><el-form-item label="操作原因"><el-input v-model="memberForm.reason" type="textarea" /></el-form-item></el-form>
+      <el-form label-width="110px"><el-form-item label="用户组"><span>{{ activeGroup?.groupName }}</span></el-form-item><el-form-item label="AAA 用户 ID"><el-input-number v-model="memberForm.userId" :min="1" /></el-form-item><el-form-item label="关系状态"><el-switch v-model="memberForm.enabled" active-text="加入" inactive-text="移除" /></el-form-item><el-form-item label="生效时间"><el-date-picker v-model="memberForm.effectiveAt" type="datetime" value-format="YYYY-MM-DDTHH:mm:ssZ" /></el-form-item><el-form-item label="操作原因"><el-input v-model="memberForm.reason" type="textarea" /></el-form-item></el-form>
       <template #footer><el-button @click="memberVisible = false">取消</el-button><el-button type="primary" @click="submitMember">保存</el-button></template>
     </el-dialog>
     <el-dialog v-model="tagBindingVisible" title="绑定 / 解绑用户标签" width="480px">
