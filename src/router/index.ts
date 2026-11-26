@@ -100,6 +100,7 @@ export const dynamicRoutes: RouteRecordRaw[] = [
     meta: { title: 'AAA 认证管理', icon: 'monitor' },
     children: [
       { path: 'users', component: () => import('@/views/aaa/users/index.vue'), name: 'AaaUsers', permissions: ['aaa:user:list'], meta: { title: 'AAA 用户', icon: 'user' } },
+      { path: 'tenants', component: () => import('@/views/aaa/tenants/index.vue'), name: 'AaaTenants', roles: ['superadmin'], meta: { title: '租户管理', icon: 'office-building' } },
       { path: 'nas', component: () => import('@/views/aaa/nas/index.vue'), name: 'AaaNas', permissions: ['aaa:nas:list'], meta: { title: 'NAS 设备', icon: 'monitor' } },
       { path: 'policy', component: () => import('@/views/aaa/policy/index.vue'), name: 'AaaPolicy', permissions: ['aaa:group:list', 'aaa:tag:list', 'aaa:device:list'], meta: { title: '用户组与策略', icon: 'tree-table' } },
       { path: 'authentication', component: () => import('@/views/aaa/authentication/index.vue'), name: 'AaaAuthentication', permissions: ['aaa:auth-provider:list', 'aaa:auth-policy:list'], meta: { title: '认证 Provider / 策略', icon: 'setting' } },
