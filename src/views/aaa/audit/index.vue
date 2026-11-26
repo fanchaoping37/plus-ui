@@ -1,0 +1,56 @@
+<template>
+  <div class="p-2 app-container">
+    <el-card shadow="never">
+      <el-tabs v-model="activeTab" @tab-change="refresh">
+        <el-tab-pane label="NAS 安全审计" name="nas"><div class="flex justify-end mb-3"><el-button @click="refresh">刷新</el-button></div><el-table v-loading="loading" :data="nasAudits"><el-table-column label="时间" prop="occurredAt" min-width="180" /><el-table-column label="NAS" prop="nasIdentity" min-width="150" /><el-table-column label="操作" prop="operation" /><el-table-column label="管理员" prop="actorId" width="120" /><el-table-column label="结果" prop="outcome" /><el-table-column label="详情" prop="detail" min-width="220" show-overflow-tooltip /></el-table></el-tab-pane>
+        <el-tab-pane label="用户凭据审计" name="credentials"><el-table v-loading="loading" :data="credentialAudits"><el-table-column label="时间" prop="occurredAt" min-width="180" /><el-table-column label="AAA 用户" prop="userId" width="120" /><el-table-column label="凭据用途" prop="credentialPurpose" min-width="170" /><el-table-column label="操作" prop="operation" /><el-table-column label="版本" prop="credentialVersion" width="100" /><el-table-column label="管理员" prop="actorId" width="120" /></el-table></el-tab-pane>
+        <el-tab-pane label="认证配置审计" name="auth"><el-table v-loading="loading" :data="authAudits"><el-table-column label="时间" prop="occurredAt" min-width="180" /><el-table-column label="对象类型" prop="aggregateType" /><el-table-column label="对象 ID" prop="aggregateId" /><el-table-column label="版本" prop="version" /><el-table-column label="操作" prop="action" /><el-table-column label="管理员" prop="actorId" width="120" /><el-table-column label="配置摘要" prop="contentSha256" min-width="220" /></el-table></el-tab-pane>
+        <el-tab-pane label="CoA 任务复核" name="coa"><div class="flex justify-end mb-3"><el-button @click="refresh">刷新任务</el-button></div><el-table v-loading="loading" :data="coaTasks"><el-table-column label="任务 ID" prop="id" width="100" /><el-table-column label="NAS" prop="nasIdentity" /><el-table-column label="会话 ID" prop="sessionId" min-width="160" /><el-table-column label="操作" prop="operation" /><el-table-column label="状态" prop="status" /><el-table-column label="创建时间" prop="createdAt" min-width="180" /><el-table-column label="复核" width="110"><template #default="{ row }"><el-button v-hasPermi="['aaa:coa-task-review:record']" link type="primary" @click="reviewCoa(row)">记录复核</el-button></template></el-table-column></el-table></el-tab-pane>
+        <el-tab-pane label="动态授权复核" name="dynamic"><div class="flex justify-end mb-3"><el-button @click="refresh">刷新操作</el-button></div><el-table v-loading="loading" :data="dynamicOperations"><el-table-column label="操作 ID" prop="id" width="110" /><el-table-column label="来源" prop="source" /><el-table-column label="目标 NAS" prop="nasIdentity" /><el-table-column label="会话 ID" prop="sessionId" min-width="160" /><el-table-column label="操作类型" prop="operationType" /><el-table-column label="状态" prop="status" /><el-table-column label="复核" width="110"><template #default="{ row }"><el-button v-hasPermi="['aaa:dynamic-auth-review:record']" link type="primary" @click="reviewDynamic(row)">记录复核</el-button></template></el-table-column></el-table></el-tab-pane>
+      </el-tabs>
+    </el-card>
+    <el-dialog v-model="reviewVisible" title="记录人工复核" width="560px">
+      <el-alert title="复核仅记录审查结论与证据，不会重试 CoA、改变 NAS 状态或改写 RADIUS 会话。" type="info" :closable="false" class="mb-3" />
+      <el-form label-width="110px"><el-form-item label="复核结论"><el-select v-model="reviewForm.disposition" style="width: 100%"><el-option label="确认" value="CONFIRMED" /><el-option label="驳回" value="REJECTED" /><el-option label="需调查" value="NEEDS_INVESTIGATION" /></el-select></el-form-item><el-form-item label="复核说明"><el-input v-model="reviewForm.note" type="textarea" maxlength="2000" /></el-form-item><el-form-item label="证据引用"><el-input v-model="reviewForm.evidenceReference" maxlength="512" /></el-form-item></el-form>
+      <template #footer><el-button @click="reviewVisible = false">取消</el-button><el-button type="primary" @click="submitReview">保存复核</el-button></template>
+    </el-dialog>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { onMounted, reactive, ref } from 'vue';
+import { ElMessage } from 'element-plus';
+import { listAuthConfigurationAudit, listDynamicAuthorizationOperations, listNasSecurityAudit, listUserCredentialAudit, listCoaTasks, recordCoaTaskReview, recordDynamicAuthorizationReview } from '@/api/aaa';
+
+const activeTab = ref('nas');
+const loading = ref(false);
+const nasAudits = ref<any[]>([]), credentialAudits = ref<any[]>([]), authAudits = ref<any[]>([]), coaTasks = ref<any[]>([]), dynamicOperations = ref<any[]>([]);
+const reviewVisible = ref(false);
+const reviewTarget = ref<{ kind: 'coa' | 'dynamic'; id: number }>();
+const reviewForm = reactive({ reviewUuid: '', disposition: 'CONFIRMED', note: '', evidenceReference: '' });
+async function refresh() {
+  loading.value = true;
+  try {
+    const res = activeTab.value === 'nas' ? await listNasSecurityAudit() :
+      activeTab.value === 'credentials' ? await listUserCredentialAudit() :
+      activeTab.value === 'auth' ? await listAuthConfigurationAudit() :
+      activeTab.value === 'coa' ? await listCoaTasks() : await listDynamicAuthorizationOperations();
+    if (activeTab.value === 'nas') nasAudits.value = res.data ?? [];
+    if (activeTab.value === 'credentials') credentialAudits.value = res.data ?? [];
+    if (activeTab.value === 'auth') authAudits.value = res.data ?? [];
+    if (activeTab.value === 'coa') coaTasks.value = res.data ?? [];
+    if (activeTab.value === 'dynamic') dynamicOperations.value = res.data ?? [];
+  } finally { loading.value = false; }
+}
+function openReview(kind: 'coa' | 'dynamic', id: number) { reviewTarget.value = { kind, id }; Object.assign(reviewForm, { reviewUuid: crypto.randomUUID(), disposition: 'CONFIRMED', note: '', evidenceReference: '' }); reviewVisible.value = true; }
+function reviewCoa(row: any) { openReview('coa', row.id); }
+function reviewDynamic(row: any) { openReview('dynamic', row.id); }
+async function submitReview() {
+  if (!reviewTarget.value) return;
+  const payload = { ...reviewForm };
+  if (reviewTarget.value.kind === 'coa') await recordCoaTaskReview(reviewTarget.value.id, payload);
+  else await recordDynamicAuthorizationReview(reviewTarget.value.id, payload);
+  ElMessage.success('人工复核记录已保存'); reviewVisible.value = false; await refresh();
+}
+onMounted(refresh);
+</script>
