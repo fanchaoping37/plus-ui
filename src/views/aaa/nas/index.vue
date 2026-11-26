@@ -131,11 +131,13 @@ function addAddress() { form.addresses.push({ endpointName: 'access', ipAddress:
 function removeAddress(index: number) { if (form.addresses.length > 1) form.addresses.splice(index, 1); }
 async function submitCreate() {
   const valid = await formRef.value?.validate().catch(() => false);
-  if (!valid || form.addresses.some(item => !item.endpointName.trim() || !item.ipAddress.trim())) { ElMessage.warning('请完整填写至少一个 NAS 来源地址'); return; }
+  if (!valid || form.addresses.some(item => !/^[a-z0-9][a-z0-9-]{0,63}$/.test(item.endpointName) || !item.ipAddress.trim())) { ElMessage.warning('Endpoint 必须使用小写字母、数字或连字符，并填写来源 IP'); return; }
+  if (!/^[0-9]{1,10}$/.test(form.vendorId)) { ElMessage.warning('Vendor ID 必须是 1..10 位十进制数字'); return; }
   saving.value = true;
   try {
     const profileValues = Object.values(portalProfiles);
     if (portalProfilesEnabled.value && profileValues.slice(0, 4).some(value => !value.trim())) { ElMessage.warning('Portal 档案的 Vendor Profile 和 Client Message Profile ID/版本均为必填'); return; }
+    if (portalProfilesEnabled.value && Boolean(portalProfiles.macTriggerMessageProfileId) !== Boolean(portalProfiles.macTriggerMessageProfileVersion)) { ElMessage.warning('MAC Trigger Profile ID 和版本必须同时填写'); return; }
     await createNasDevice({ ...form, addresses: form.addresses.map(item => ({ ...item })), portalProfiles: portalProfilesEnabled.value ? { ...portalProfiles } : undefined }); ElMessage.success('NAS 已创建'); createVisible.value = false; await getList(); }
   finally { saving.value = false; }
 }
@@ -164,7 +166,7 @@ function openAddresses(row: NasDevice) {
 function addExistingAddress() { addressForm.value.push({ endpointName: 'access', ipAddress: '', enabled: true }); }
 function removeExistingAddress(index: number) { if (addressForm.value.length > 1) addressForm.value.splice(index, 1); }
 async function submitAddresses() {
-  if (!activeNas.value || addressForm.value.length === 0 || addressForm.value.some(item => !item.endpointName.trim() || !item.ipAddress.trim())) return ElMessage.warning('请填写至少一个完整来源地址');
+  if (!activeNas.value || addressForm.value.length === 0 || addressForm.value.some(item => !/^[a-z0-9][a-z0-9-]{0,63}$/.test(item.endpointName) || !item.ipAddress.trim())) return ElMessage.warning('请填写至少一个完整来源地址');
   const id = numericNasId(activeNas.value);
   if (!id) return ElMessage.warning('当前后端 NAS 列表未提供数值型 nasDeviceId，不能替换地址');
   saving.value = true;
