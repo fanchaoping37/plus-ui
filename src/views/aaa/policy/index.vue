@@ -93,6 +93,6 @@ async function submitMember() { if (!activeGroup.value || memberForm.userId < 1 
 function openTagBinding(row: RadiusTag) { activeTag.value = row; Object.assign(tagBindingForm, { userId: 0, assigned: true }); tagBindingVisible.value = true; }
 async function submitTagBinding() { if (!activeTag.value || tagBindingForm.userId < 1) return ElMessage.warning('请输入 AAA 用户 ID'); await setUserTag(tagBindingForm.userId, activeTag.value.id, tagBindingForm.assigned); tagBindingVisible.value = false; ElMessage.success('标签关系已更新'); }
 async function submitDevice() { if (deviceForm.userId < 1 || !deviceForm.deviceKey.trim()) return ElMessage.warning('请填写用户 ID 和设备标识'); await registerRadiusDevice({ ...deviceForm }); deviceVisible.value = false; await getDevices(); }
-async function toggleDevice(row: RadiusDevice) { const status = row.status === 'ACTIVE' ? 'BLOCKED' : 'ACTIVE'; await ElMessageBox.confirm(`确认将设备状态改为 ${status}？`); await changeRadiusDeviceStatus(row.id, status); await getDevices(); }
+async function toggleDevice(row: RadiusDevice) { if (row.status === 'REVOKED') return ElMessage.warning('已撤销的设备不可恢复，请登记新的设备绑定'); const status = row.status === 'ACTIVE' ? 'BLOCKED' : 'ACTIVE'; await ElMessageBox.confirm(`确认将设备状态改为 ${status}？`); await changeRadiusDeviceStatus(row.id, status); await getDevices(); }
 onMounted(refresh);
 </script>
