@@ -224,3 +224,36 @@ export const listTenants = (): AxiosPromise<TenantSummary[]> => request({ url: '
 export const getTenantContext = (): AxiosPromise<TenantSummary> => request({ url: '/system/tenant/context', method: 'get' });
 export const switchTenantContext = (tenantUuid: string): AxiosPromise<TenantSummary> =>
   request({ url: `/system/tenant/context/${tenantUuid}`, method: 'put' });
+
+export interface UpstreamDynamicAuthorizationClient {
+  id: number;
+  providerId: string;
+  providerVersion: string;
+  secretReferenceId: string;
+  sourceAddress: string;
+  sourcePort: number;
+  enabled: boolean;
+  effectiveFrom?: string;
+  effectiveUntil?: string;
+  version: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+export const createUpstreamServerSecretReference = (providerId: string, providerVersion: string, data: { referenceId: string; sharedSecret: string }) =>
+  request({ url: `${aaa}/providers/${providerId}/versions/${providerVersion}/server-secret-references`, method: 'post', data, headers: { repeatSubmit: false } });
+export const rotateUpstreamServerSecretReference = (providerId: string, providerVersion: string, referenceId: string, sharedSecret: string) =>
+  request({ url: `${aaa}/providers/${providerId}/versions/${providerVersion}/server-secret-references/${referenceId}`, method: 'put', data: { sharedSecret }, headers: { repeatSubmit: false } });
+export const disableUpstreamServerSecretReference = (providerId: string, providerVersion: string, referenceId: string) =>
+  request({ url: `${aaa}/providers/${providerId}/versions/${providerVersion}/server-secret-references/${referenceId}`, method: 'delete' });
+export const listUpstreamDynamicAuthorizationClients = (providerId: string, providerVersion: string): AxiosPromise<UpstreamDynamicAuthorizationClient[]> =>
+  request({ url: `${aaa}/providers/${providerId}/versions/${providerVersion}/dynamic-authorization-clients`, method: 'get' });
+export const createUpstreamDynamicAuthorizationClient = (providerId: string, providerVersion: string, data: Omit<UpstreamDynamicAuthorizationClient, 'id' | 'providerId' | 'providerVersion' | 'enabled' | 'version' | 'createdAt' | 'updatedAt'>) =>
+  request({ url: `${aaa}/providers/${providerId}/versions/${providerVersion}/dynamic-authorization-clients`, method: 'post', data });
+export const updateUpstreamDynamicAuthorizationClient = (providerId: string, providerVersion: string, clientId: number, data: Omit<UpstreamDynamicAuthorizationClient, 'id' | 'providerId' | 'providerVersion' | 'enabled' | 'version' | 'createdAt' | 'updatedAt'> & { expectedVersion: number }) =>
+  request({ url: `${aaa}/providers/${providerId}/versions/${providerVersion}/dynamic-authorization-clients/${clientId}`, method: 'put', data });
+export const setUpstreamDynamicAuthorizationClientEnabled = (providerId: string, providerVersion: string, clientId: number, expectedVersion: number, enabled: boolean) =>
+  request({ url: `${aaa}/providers/${providerId}/versions/${providerVersion}/dynamic-authorization-clients/${clientId}/${enabled ? 'enable' : 'disable'}`, method: 'post', params: { expectedVersion } });
+export const validateUpstreamDynamicAuthorizationClient = (providerId: string, providerVersion: string, clientId: number) =>
+  request({ url: `${aaa}/providers/${providerId}/versions/${providerVersion}/dynamic-authorization-clients/${clientId}/validate`, method: 'post' });
+export const listUpstreamDynamicAuthorizationClientAudit = (clientId: number, limit = 100) =>
+  request({ url: `${aaa}/audit/upstream-dynamic-authorization-clients/${clientId}`, method: 'get', params: { limit } });
