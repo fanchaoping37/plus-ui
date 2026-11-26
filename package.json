@@ -1,13 +1,13 @@
 {
   "$schema": "https://json.schemastore.org/package",
-  "name": "ruoyi-vue-plus",
+  "name": "radius-aaa-ui",
   "version": "6.1.0",
-  "description": "RuoYi-Vue-Plus后台管理系统",
+  "description": "Radius-Vue-Plus AAA 管理平台前端",
   "license": "MIT",
   "author": "LionLi",
   "repository": {
     "type": "git",
-    "url": "https://gitee.com/JavaLionLi/plus-ui.git"
+    "url": "https://github.com/fanchaoping37/plus-ui.git"
   },
   "type": "module",
   "scripts": {
