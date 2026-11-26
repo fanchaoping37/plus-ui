@@ -39,6 +39,16 @@
         <el-form-item label="型号"><el-input v-model="form.modelId" maxlength="64" /></el-form-item>
         <el-form-item label="Accounting 间隔(分钟)"><el-input-number v-model="form.accountingInterimIntervalMinutes" :min="1" :max="71582788" /></el-form-item>
         <el-form-item label="强制 Message-Authenticator"><el-switch v-model="form.requireAccessMessageAuthenticator" /></el-form-item>
+        <el-divider content-position="left">Portal / MAC-Trigger 配置档案引用</el-divider>
+        <el-form-item label="绑定 Portal 档案"><el-switch v-model="portalProfilesEnabled" /></el-form-item>
+        <template v-if="portalProfilesEnabled">
+          <el-form-item label="Vendor Profile ID"><el-input v-model="portalProfiles.vendorProfileId" maxlength="64" /></el-form-item>
+          <el-form-item label="Vendor Profile 版本"><el-input v-model="portalProfiles.vendorProfileVersion" maxlength="64" /></el-form-item>
+          <el-form-item label="Client Message ID"><el-input v-model="portalProfiles.clientMessageProfileId" maxlength="64" /></el-form-item>
+          <el-form-item label="Client Message 版本"><el-input v-model="portalProfiles.clientMessageProfileVersion" maxlength="64" /></el-form-item>
+          <el-form-item label="MAC Trigger ID"><el-input v-model="portalProfiles.macTriggerMessageProfileId" maxlength="64" /></el-form-item>
+          <el-form-item label="MAC Trigger 版本"><el-input v-model="portalProfiles.macTriggerMessageProfileVersion" maxlength="64" /></el-form-item>
+        </template>
         <el-divider content-position="left">RADIUS 来源地址</el-divider>
         <div v-for="(addr, index) in form.addresses" :key="index" class="flex gap-2 w-full mb-2">
           <el-input v-model="addr.endpointName" placeholder="Endpoint，例如 access" />
@@ -98,6 +108,8 @@ const addressForm = ref<NasAddress[]>([]);
 const formRef = ref();
 const initialForm = (): NasDeviceCreate => ({ identity: '', displayName: '', vendorId: '', modelId: '', accountingInterimIntervalMinutes: 5, requireAccessMessageAuthenticator: true, addresses: [{ endpointName: 'access', ipAddress: '', enabled: true }] });
 const form = reactive<NasDeviceCreate>(initialForm());
+const portalProfilesEnabled = ref(false);
+const portalProfiles = reactive({ vendorProfileId: '', vendorProfileVersion: '', clientMessageProfileId: '', clientMessageProfileVersion: '', macTriggerMessageProfileId: '', macTriggerMessageProfileVersion: '' });
 const rules = { identity: [{ required: true, message: '请输入 NAS Identity', trigger: 'blur' }], displayName: [{ required: true, message: '请输入名称', trigger: 'blur' }], vendorId: [{ required: true, message: '请输入 IANA Vendor ID', trigger: 'blur' }] };
 function formatAddress(value: number[] | string) {
   const bytes = typeof value === 'string'
@@ -114,14 +126,17 @@ async function getList() {
   try { const res = await listNasDevices(); rows.value = res.data ?? []; }
   finally { loading.value = false; }
 }
-function openCreate() { Object.assign(form, initialForm()); createVisible.value = true; }
+function openCreate() { Object.assign(form, initialForm()); portalProfilesEnabled.value = false; Object.assign(portalProfiles, { vendorProfileId: '', vendorProfileVersion: '', clientMessageProfileId: '', clientMessageProfileVersion: '', macTriggerMessageProfileId: '', macTriggerMessageProfileVersion: '' }); createVisible.value = true; }
 function addAddress() { form.addresses.push({ endpointName: 'access', ipAddress: '', enabled: true }); }
 function removeAddress(index: number) { if (form.addresses.length > 1) form.addresses.splice(index, 1); }
 async function submitCreate() {
   const valid = await formRef.value?.validate().catch(() => false);
   if (!valid || form.addresses.some(item => !item.endpointName.trim() || !item.ipAddress.trim())) { ElMessage.warning('请完整填写至少一个 NAS 来源地址'); return; }
   saving.value = true;
-  try { await createNasDevice({ ...form, addresses: form.addresses.map(item => ({ ...item })) }); ElMessage.success('NAS 已创建'); createVisible.value = false; await getList(); }
+  try {
+    const profileValues = Object.values(portalProfiles);
+    if (portalProfilesEnabled.value && profileValues.slice(0, 4).some(value => !value.trim())) { ElMessage.warning('Portal 档案的 Vendor Profile 和 Client Message Profile ID/版本均为必填'); return; }
+    await createNasDevice({ ...form, addresses: form.addresses.map(item => ({ ...item })), portalProfiles: portalProfilesEnabled.value ? { ...portalProfiles } : undefined }); ElMessage.success('NAS 已创建'); createVisible.value = false; await getList(); }
   finally { saving.value = false; }
 }
 async function toggleStatus(row: NasDevice) {
