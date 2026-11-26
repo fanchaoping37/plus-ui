@@ -40,6 +40,7 @@
             <el-button v-hasPermi="['aaa:user:credential:reset']" link type="primary" @click="openCredential(row, 'radius')">RADIUS 密码</el-button>
             <el-button v-hasPermi="['aaa:user:credential:reset']" link type="primary" @click="openCredential(row, 'eap')">EAP 密码</el-button>
             <el-button v-hasPermi="['aaa:user:upstream-credential:reset']" link type="primary" @click="openUpstream(row)">上游账号</el-button>
+            <el-button v-hasPermi="['aaa:user:personal-data:query']" link type="primary" @click="openPersonalData(row)">个人信息</el-button>
             <el-button v-hasPermi="['aaa:user:edit']" link type="warning" @click="openStatus(row)">状态</el-button>
           </template>
         </el-table-column>
@@ -81,6 +82,48 @@
       <template #footer><el-button @click="identityVisible = false">取消</el-button><el-button type="primary" @click="submitIdentity">绑定</el-button></template>
     </el-dialog>
 
+    <el-dialog v-model="personalDataVisible" title="AAA 用户个人信息" width="720px" destroy-on-close @closed="clearPersonalData">
+      <el-alert title="个人信息使用独立加密存储。默认只显示字段是否存在；解密必须具备单独权限、明确选择字段并填写原因。" type="warning" :closable="false" class="mb-3" />
+      <el-descriptions v-if="personalPresence" :column="3" border class="mb-4">
+        <el-descriptions-item label="手机号">{{ personalPresence.phonePresent ? '已设置' : '未设置' }}</el-descriptions-item>
+        <el-descriptions-item label="邮箱">{{ personalPresence.emailPresent ? '已设置' : '未设置' }}</el-descriptions-item>
+        <el-descriptions-item label="证件号">{{ personalPresence.idNumberPresent ? '已设置' : '未设置' }}</el-descriptions-item>
+        <el-descriptions-item label="姓名">{{ personalPresence.fullNamePresent ? '已设置' : '未设置' }}</el-descriptions-item>
+        <el-descriptions-item label="地址">{{ personalPresence.addressPresent ? '已设置' : '未设置' }}</el-descriptions-item>
+      </el-descriptions>
+      <el-tabs>
+        <el-tab-pane label="更新个人信息">
+          <el-form label-width="100px">
+            <el-form-item label="手机号"><el-input v-model="personalForm.phone" maxlength="32" /></el-form-item>
+            <el-form-item label="邮箱"><el-input v-model="personalForm.email" maxlength="320" /></el-form-item>
+            <el-form-item label="证件号"><el-input v-model="personalForm.idNumber" maxlength="32" /></el-form-item>
+            <el-form-item label="姓名"><el-input v-model="personalForm.fullName" maxlength="256" /></el-form-item>
+            <el-form-item label="地址"><el-input v-model="personalForm.address" type="textarea" maxlength="1024" /></el-form-item>
+            <el-form-item label="变更原因"><el-input v-model="personalForm.reason" type="textarea" maxlength="512" /></el-form-item>
+          </el-form>
+          <el-button v-hasPermi="['aaa:user:personal-data:manage']" type="primary" :loading="saving" @click="savePersonalData">加密保存</el-button>
+        </el-tab-pane>
+        <el-tab-pane label="授权解密">
+          <el-form label-width="110px">
+            <el-form-item label="解密字段">
+              <el-checkbox-group v-model="decryptFields">
+                <el-checkbox value="phone">手机号</el-checkbox><el-checkbox value="email">邮箱</el-checkbox><el-checkbox value="idNumber">证件号</el-checkbox><el-checkbox value="fullName">姓名</el-checkbox><el-checkbox value="address">地址</el-checkbox>
+              </el-checkbox-group>
+            </el-form-item>
+            <el-form-item label="解密原因"><el-input v-model="decryptReason" type="textarea" maxlength="512" /></el-form-item>
+          </el-form>
+          <el-button v-hasPermi="['aaa:user:personal-data:decrypt']" type="warning" :loading="saving" @click="decryptPersonalData">按所选字段解密</el-button>
+          <el-descriptions v-if="sensitiveData" :column="1" border class="mt-4">
+            <el-descriptions-item label="手机号">{{ sensitiveData.phone || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="邮箱">{{ sensitiveData.email || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="证件号">{{ sensitiveData.idNumber || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="姓名">{{ sensitiveData.fullName || '-' }}</el-descriptions-item>
+            <el-descriptions-item label="地址">{{ sensitiveData.address || '-' }}</el-descriptions-item>
+          </el-descriptions>
+        </el-tab-pane>
+      </el-tabs>
+    </el-dialog>
+
     <el-dialog v-model="upstreamVisible" title="设置独立上游运营商账号" width="560px" destroy-on-close>
       <el-alert title="上游账号和密码独立加密保存，不复用 NAS Shared Secret、RADIUS 本地密码或 EAP NT-Hash。" type="warning" :closable="false" class="mb-4" />
       <el-form label-width="120px">
@@ -110,6 +153,8 @@ import { ElMessage } from 'element-plus';
 import {
   bindRadiusIdentity, changeRadiusUserStatus, createRadiusUser, listRadiusUsers,
   replaceEapMschapv2Password, replaceRadiusUserPassword, replaceUpstreamCredential, revokeUpstreamCredential,
+  getRadiusUserPersonalData, replaceRadiusUserPersonalData, decryptRadiusUserPersonalData,
+  type RadiusUserPersonalDataPresence, type RadiusUserPersonalDataSensitive,
   type RadiusUser, type RadiusUserCreate, type RadiusUserStatus
 } from '@/api/aaa';
 
@@ -127,6 +172,7 @@ const statusVisible = ref(false);
 const identityVisible = ref(false);
 const credentialVisible = ref(false);
 const upstreamVisible = ref(false);
+const personalDataVisible = ref(false);
 const activeUser = ref<RadiusUser>();
 const createFormRef = ref();
 const createForm = reactive<RadiusUserCreate>({ userNo: '', displayName: '', userType: 'CAMPUS', reason: '' });
@@ -140,6 +186,11 @@ const identityForm = reactive({ identityType: 'USERNAME' as 'USERNAME' | 'MAC', 
 const credentialMode = ref<'radius' | 'eap'>('radius');
 const credentialPassword = ref('');
 const upstreamForm = reactive({ credentialAlias: 'default', operatorUsername: '', password: '' });
+const personalPresence = ref<RadiusUserPersonalDataPresence>();
+const sensitiveData = ref<RadiusUserPersonalDataSensitive>();
+const personalForm = reactive({ phone: '', email: '', idNumber: '', fullName: '', address: '', reason: '' });
+const decryptFields = ref<string[]>([]);
+const decryptReason = ref('');
 const transitionOptions = computed(() => {
   const transitions: Record<string, RadiusUserStatus[]> = {
     ACTIVE: ['DISABLED', 'LOCKED', 'EXPIRED', 'PENDING_DELETE'],
@@ -180,6 +231,45 @@ async function submitIdentity() {
   if (!activeUser.value || !identityForm.identity.trim() || (identityForm.scope === 'NAS' && !identityForm.nasIdentity.trim())) { ElMessage.warning('请完整填写身份映射'); return; }
   await bindRadiusIdentity(activeUser.value.id, { ...identityForm });
   ElMessage.success('身份绑定已提交'); identityVisible.value = false;
+}
+async function openPersonalData(row: RadiusUser) {
+  activeUser.value = row;
+  personalDataVisible.value = true;
+  personalPresence.value = undefined;
+  sensitiveData.value = undefined;
+  Object.assign(personalForm, { phone: '', email: '', idNumber: '', fullName: '', address: '', reason: '' });
+  const res = await getRadiusUserPersonalData(row.id);
+  personalPresence.value = res.data;
+}
+async function savePersonalData() {
+  if (!activeUser.value || !personalForm.reason.trim()) { ElMessage.warning('请填写个人信息变更原因'); return; }
+  saving.value = true;
+  try {
+    await replaceRadiusUserPersonalData(activeUser.value.id, { ...personalForm });
+    ElMessage.success('个人信息已加密保存');
+    Object.assign(personalForm, { phone: '', email: '', idNumber: '', fullName: '', address: '', reason: '' });
+    const res = await getRadiusUserPersonalData(activeUser.value.id);
+    personalPresence.value = res.data;
+  } finally { saving.value = false; }
+}
+async function decryptPersonalData() {
+  if (!activeUser.value || decryptFields.value.length === 0 || !decryptReason.value.trim()) { ElMessage.warning('请选择解密字段并填写解密原因'); return; }
+  saving.value = true;
+  try {
+    const fields = new Set(decryptFields.value);
+    const res = await decryptRadiusUserPersonalData(activeUser.value.id, {
+      phone: fields.has('phone'), email: fields.has('email'), idNumber: fields.has('idNumber'),
+      fullName: fields.has('fullName'), address: fields.has('address'), reason: decryptReason.value
+    });
+    sensitiveData.value = res.data;
+  } finally { saving.value = false; }
+}
+function clearPersonalData() {
+  personalPresence.value = undefined;
+  sensitiveData.value = undefined;
+  decryptFields.value = [];
+  decryptReason.value = '';
+  Object.assign(personalForm, { phone: '', email: '', idNumber: '', fullName: '', address: '', reason: '' });
 }
 function openUpstream(row: RadiusUser) { activeUser.value = row; Object.assign(upstreamForm, { credentialAlias: 'default', operatorUsername: '', password: '' }); upstreamVisible.value = true; }
 async function submitUpstream() {
