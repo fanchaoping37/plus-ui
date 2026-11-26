@@ -145,9 +145,10 @@ export const filterDynamicRoutes = (routes: RouteRecordRaw[]): RouteRecordRaw[] 
     const ownPermission = route.permissions ? auth.hasPermiOr(route.permissions) : undefined;
     const ownRole = route.roles ? auth.hasRoleOr(route.roles) : undefined;
     const ownAllowed = ownPermission ?? ownRole ?? false;
+    const hasOwnGuard = Boolean(route.permissions || route.roles);
     const allowed = route.children
       ? ownAllowed || Boolean(children?.length)
-      : ownPermission ?? ownRole ?? true;
+      : hasOwnGuard && ownAllowed;
     if (allowed) result.push({ ...route, ...(route.children ? { children } : {}) });
   });
   return result;
