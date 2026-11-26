@@ -136,7 +136,7 @@
     </el-dialog>
 
     <el-dialog v-model="credentialVisible" :title="credentialMode === 'eap' ? '设置 EAP-MSCHAPv2 密码' : '设置 RADIUS PAP 密码'" width="520px" destroy-on-close>
-      <el-alert v-if="credentialMode === 'eap'" title="此密码专用于 PEAP 内层 EAP-MSCHAPv2，独立派生 NT-Hash；不等于管理后台密码或上游运营商密码。" type="warning" :closable="false" class="mb-4" />
+      <el-alert v-if="credentialMode === 'eap'" title="此密码专用于 PEAP 内层 EAP-MSCHAPv2，独立派生 NT-Hash；不等于管理后台密码或上游运营商密码。" description="生产认证还要求配置生产 SecretEncryptionKeyProvider/KMS、NAS 对应的 PKCS#11/HSM 证书与私钥，并启用 PEAP Dispatcher。缺少这些依赖时，后端应失败关闭，不会回退使用其他凭据。" type="warning" :closable="false" class="mb-4" />
       <el-alert v-else title="此密码用于本地 RADIUS PAP 凭据，与 EAP-MSCHAPv2 NT-Hash 和上游凭据分开保存。" type="info" :closable="false" class="mb-4" />
       <el-form label-width="110px">
         <el-form-item label="AAA 用户"><span>{{ activeUser?.userNo }}</span></el-form-item>
@@ -149,7 +149,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
-import { ElMessage } from 'element-plus';
+import { ElMessage, ElMessageBox } from 'element-plus';
 import {
   bindRadiusIdentity, changeRadiusUserStatus, createRadiusUser, listRadiusUsers,
   replaceEapMschapv2Password, replaceRadiusUserPassword, replaceUpstreamCredential, revokeUpstreamCredential,
