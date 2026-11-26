@@ -255,6 +255,7 @@ async function savePersonalData() {
 async function decryptPersonalData() {
   if (!activeUser.value || decryptFields.value.length === 0 || !decryptReason.value.trim()) { ElMessage.warning('请选择解密字段并填写解密原因'); return; }
   saving.value = true;
+  sensitiveData.value = undefined;
   try {
     const fields = new Set(decryptFields.value);
     const res = await decryptRadiusUserPersonalData(activeUser.value.id, {
