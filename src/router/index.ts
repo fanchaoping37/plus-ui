@@ -92,7 +92,21 @@ export const constantRoutes: RouteRecordRaw[] = [
 ];
 
 // 动态路由，基于用户权限动态去加载
-export const dynamicRoutes: RouteRecordRaw[] = [];
+export const dynamicRoutes: RouteRecordRaw[] = [
+  {
+    path: '/aaa',
+    component: Layout,
+    name: 'AaaManagement',
+    meta: { title: 'AAA 认证管理', icon: 'monitor' },
+    children: [
+      { path: 'users', component: () => import('@/views/aaa/users/index.vue'), name: 'AaaUsers', permissions: ['aaa:user:list'], meta: { title: 'AAA 用户', icon: 'user' } },
+      { path: 'nas', component: () => import('@/views/aaa/nas/index.vue'), name: 'AaaNas', permissions: ['aaa:nas:list'], meta: { title: 'NAS 设备', icon: 'monitor' } },
+      { path: 'policy', component: () => import('@/views/aaa/policy/index.vue'), name: 'AaaPolicy', permissions: ['aaa:group:list', 'aaa:tag:list', 'aaa:device:list'], meta: { title: '用户组与策略', icon: 'tree-table' } },
+      { path: 'authentication', component: () => import('@/views/aaa/authentication/index.vue'), name: 'AaaAuthentication', permissions: ['aaa:auth-provider:list', 'aaa:auth-policy:list'], meta: { title: '认证 Provider / 策略', icon: 'setting' } },
+      { path: 'audit', component: () => import('@/views/aaa/audit/index.vue'), name: 'AaaAudit', permissions: ['aaa:audit:nas:list', 'aaa:audit:credential:list', 'aaa:audit:auth-config:list', 'aaa:coa-task-review:list', 'aaa:dynamic-auth-review:list'], meta: { title: '安全审计与复核', icon: 'document' } }
+    ]
+  }
+];
 
 /**
  * 创建路由
