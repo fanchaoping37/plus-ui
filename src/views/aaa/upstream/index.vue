@@ -12,7 +12,7 @@
           <el-divider />
           <el-form label-width="150px" class="max-w-700px">
             <el-form-item label="Secret Reference ID"><el-input v-model="secretForm.referenceId" maxlength="128" /></el-form-item>
-            <el-form-item label="Shared Secret"><el-input v-model="secretForm.sharedSecret" type="password" show-password autocomplete="new-password" /></el-form-item>
+            <el-form-item label="Shared Secret"><el-input v-model="secretForm.sharedSecret" type="password" show-password maxlength="2048" autocomplete="new-password" /></el-form-item>
             <el-form-item>
               <el-button v-hasPermi="['aaa:provider:secret:manage']" type="primary" :disabled="!providerReady" :loading="saving" @click="createSecret">创建引用</el-button>
               <el-button v-hasPermi="['aaa:provider:secret:manage']" type="warning" :disabled="!providerReady" :loading="saving" @click="rotateSecret">轮换引用</el-button>
@@ -95,7 +95,7 @@ async function loadClients() {
   finally { loading.value = false; }
 }
 async function createSecret() {
-  if (!providerReady.value || !secretForm.referenceId.trim() || !secretForm.sharedSecret) return ElMessage.warning('请确认 Provider 并填写引用 ID 与 Secret');
+  if (!providerReady.value || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(secretForm.referenceId) || !secretForm.sharedSecret) return ElMessage.warning('请确认 Provider，并填写符合格式的引用 ID 与 Secret');
   saving.value = true;
   try {
     const sharedSecret = secretForm.sharedSecret; secretForm.sharedSecret = '';
@@ -105,7 +105,7 @@ async function createSecret() {
   } finally { secretForm.sharedSecret = ''; saving.value = false; }
 }
 async function rotateSecret() {
-  if (!providerReady.value || !secretForm.referenceId.trim() || !secretForm.sharedSecret) return ElMessage.warning('请确认 Provider 并填写引用 ID 与新 Secret');
+  if (!providerReady.value || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(secretForm.referenceId) || !secretForm.sharedSecret) return ElMessage.warning('请确认 Provider，并填写符合格式的引用 ID 与新 Secret');
   await ElMessageBox.confirm('轮换会替换此 Provider 版本引用的当前 Server Secret。确认继续？');
   saving.value = true;
   try {
