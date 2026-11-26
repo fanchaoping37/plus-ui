@@ -23,6 +23,16 @@
       </div>
     </div>
     <div class="right-menu flex align-center">
+      <el-select
+        v-if="tenantOptions.length"
+        v-model="activeTenantUuid"
+        size="small"
+        class="tenant-context-select"
+        :title="activeTenantName"
+        @change="handleTenantSwitch"
+      >
+        <el-option v-for="tenant in tenantOptions" :key="tenant.tenantUuid" :label="tenant.tenantName + ' · ' + tenant.tenantCode" :value="tenant.tenantUuid" />
+      </el-select>
       <template v-if="appStore.device !== 'mobile'">
         <search-menu ref="searchMenuRef" />
         <el-tooltip content="搜索" effect="dark" placement="bottom">
@@ -107,6 +117,7 @@ import { useAppStore } from '@/store/modules/app';
 import { useNoticeStore } from '@/store/modules/notice';
 import { useSettingsStore } from '@/store/modules/settings';
 import { useUserStore } from '@/store/modules/user';
+import { getTenantContext, listTenants, switchTenantContext, type TenantSummary } from '@/api/aaa';
 import notice from './notice/index.vue';
 import TopBar from './TopBar/index.vue';
 import SearchMenu from './TopBar/search.vue';
@@ -119,6 +130,27 @@ const noticeStore = storeToRefs(useNoticeStore());
 const navType = computed(() => settingsStore.navType);
 const showLogo = computed(() => settingsStore.sidebarLogo);
 const displayName = computed(() => userStore.nickname || '管理员');
+const tenantOptions = ref<TenantSummary[]>([]);
+const activeTenantUuid = ref('');
+const activeTenantName = computed(() => tenantOptions.value.find(item => item.tenantUuid === activeTenantUuid.value)?.tenantName ?? '');
+
+const loadTenantContext = async () => {
+  try {
+    const [listResult, currentResult] = await Promise.all([listTenants(), getTenantContext()]);
+    tenantOptions.value = listResult.data ?? [];
+    activeTenantUuid.value = currentResult.data?.tenantUuid ?? '';
+  } catch {
+    tenantOptions.value = [];
+    activeTenantUuid.value = '';
+  }
+};
+const handleTenantSwitch = async (tenantUuid: string) => {
+  if (!tenantUuid || tenantUuid === activeTenantUuid.value) return;
+  await switchTenantContext(tenantUuid);
+  ElMessage.success('租户上下文已切换，正在刷新权限和菜单');
+  window.location.reload();
+};
+onMounted(loadTenantContext);
 
 // 搜索菜单
 const searchMenuRef = ref<InstanceType<typeof SearchMenu>>();
@@ -166,6 +198,12 @@ const handleCommand = (command: string) => {
 </script>
 
 <style lang="scss" scoped>
+.tenant-context-select {
+  width: 210px;
+  margin-right: 6px;
+  flex-shrink: 0;
+}
+
 .navbar.navtop {
   .nav-context {
     flex: 1;
