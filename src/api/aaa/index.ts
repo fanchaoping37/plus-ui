@@ -46,6 +46,7 @@ export interface NasAddress {
 }
 
 export interface NasDevice {
+  id?: number;
   businessId: string;
   tenantUuid: string;
   identity: string;
