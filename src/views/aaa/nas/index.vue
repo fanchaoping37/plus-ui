@@ -57,6 +57,18 @@
       <template #footer><el-button type="primary" @click="copySecret">复制 Secret</el-button><el-button @click="closeSecret">我已安全保存</el-button></template>
     </el-dialog>
 
+    <el-dialog v-model="addressVisible" title="替换 NAS 来源地址" width="680px" destroy-on-close>
+      <el-alert title="采用完整集合替换和 configVersion 乐观锁；只接受明确的 IPv4 / IPv6 字面地址。" type="info" :closable="false" class="mb-3" />
+      <div v-for="(addr, index) in addressForm" :key="index" class="flex gap-2 w-full mb-2">
+        <el-input v-model="addr.endpointName" placeholder="Endpoint 名称" />
+        <el-input v-model="addr.ipAddress" placeholder="IPv4 / IPv6" />
+        <el-switch v-model="addr.enabled" />
+        <el-button link type="danger" icon="Delete" @click="removeExistingAddress(index)" />
+      </div>
+      <el-button plain type="primary" icon="Plus" @click="addExistingAddress">添加地址</el-button>
+      <template #footer><el-button @click="addressVisible = false">取消</el-button><el-button type="primary" :loading="saving" @click="submitAddresses">保存地址</el-button></template>
+    </el-dialog>
+
     <el-dialog v-model="rotateVisible" title="轮换 RADIUS Shared Secret" width="520px" destroy-on-close>
       <el-alert title="轮换会立即改变 NAS 当前生效的 Shared Secret。请确保已准备好同步更新 NAS 侧配置。" type="warning" :closable="false" class="mb-3" />
       <el-input v-model="rotateSecret" type="password" show-password autocomplete="new-password" placeholder="输入新的 Shared Secret" />
@@ -68,7 +80,7 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { changeNasStatus, createNasDevice, generateNasRadiusSecret, listNasDevices, rotateNasRadiusSecret, type NasDevice, type NasDeviceCreate } from '@/api/aaa';
+import { changeNasMessageAuthenticator, changeNasStatus, createNasDevice, generateNasRadiusSecret, listNasDevices, replaceNasAddresses, rotateNasRadiusSecret, type NasAddress, type NasDevice, type NasDeviceCreate } from '@/api/aaa';
 
 const loading = ref(false);
 const saving = ref(false);
@@ -78,9 +90,11 @@ function canManageNas(row: NasDevice) { return numericNasId(row) > 0; }
 const createVisible = ref(false);
 const secretVisible = ref(false);
 const rotateVisible = ref(false);
+const addressVisible = ref(false);
 const activeNas = ref<NasDevice>();
 const oneTimeSecret = ref('');
 const rotateSecret = ref('');
+const addressForm = ref<NasAddress[]>([]);
 const formRef = ref();
 const initialForm = (): NasDeviceCreate => ({ identity: '', displayName: '', vendorId: '', modelId: '', accountingInterimIntervalMinutes: 5, requireAccessMessageAuthenticator: true, addresses: [{ endpointName: 'access', ipAddress: '', enabled: true }] });
 const form = reactive<NasDeviceCreate>(initialForm());
@@ -122,6 +136,30 @@ async function generateSecret(row: NasDevice) {
   const res = await generateNasRadiusSecret(id);
   oneTimeSecret.value = res.data?.secret ?? '';
   secretVisible.value = true;
+  await getList();
+}
+function openAddresses(row: NasDevice) {
+  activeNas.value = row;
+  addressForm.value = row.addresses.map(item => ({ endpointName: item.endpointName, ipAddress: formatAddress(item.address), enabled: item.enabled }));
+  addressVisible.value = true;
+}
+function addExistingAddress() { addressForm.value.push({ endpointName: 'access', ipAddress: '', enabled: true }); }
+function removeExistingAddress(index: number) { if (addressForm.value.length > 1) addressForm.value.splice(index, 1); }
+async function submitAddresses() {
+  if (!activeNas.value || addressForm.value.length === 0 || addressForm.value.some(item => !item.endpointName.trim() || !item.ipAddress.trim())) return ElMessage.warning('请填写至少一个完整来源地址');
+  const id = numericNasId(activeNas.value);
+  if (!id) return ElMessage.warning('当前后端 NAS 列表未提供数值型 nasDeviceId，不能替换地址');
+  saving.value = true;
+  try {
+    await replaceNasAddresses(id, activeNas.value.configVersion, addressForm.value.map(item => ({ ...item })));
+    addressVisible.value = false; await getList(); ElMessage.success('NAS 来源地址已替换');
+  } finally { saving.value = false; }
+}
+async function toggleMessageAuthenticator(row: NasDevice) {
+  const id = numericNasId(row);
+  if (!id) return ElMessage.warning('当前后端 NAS 列表未提供数值型 nasDeviceId，不能修改安全策略');
+  await ElMessageBox.confirm(`确认将 NAS ${row.identity} 的 Message-Authenticator 策略切换为 ${row.requireAccessMessageAuthenticator ? '非强制' : '强制'}？`);
+  await changeNasMessageAuthenticator(id, row.configVersion, !row.requireAccessMessageAuthenticator);
   await getList();
 }
 function openRotate(row: NasDevice) { activeNas.value = row; rotateSecret.value = ''; rotateVisible.value = true; }
