@@ -56,7 +56,7 @@ export interface NasDevice {
   status: NasStatus;
   accountingInterimIntervalMinutes?: number;
   configVersion: number;
-  addresses: Array<{ endpointName: string; address: number[]; enabled: boolean }>;
+  addresses: Array<{ endpointName: string; address: number[] | string; enabled: boolean }>;
   secrets?: Array<{ protocol: string; version: number; lifecycleStatus: string }>;
   requireAccessMessageAuthenticator: boolean;
 }
