@@ -133,7 +133,7 @@ const displayName = computed(() => userStore.nickname || '管理员');
 const tenantOptions = ref<TenantSummary[]>([]);
 const activeTenantUuid = ref('');
 const selectedTenantUuid = ref('');
-const activeTenantName = computed(() => tenantOptions.value.find(item => item.tenantUuid === activeTenantUuid.value)?.tenantName ?? '');
+const activeTenantName = computed(() => tenantOptions.value.find(item => item.tenantUuid === selectedTenantUuid.value)?.tenantName ?? '');
 
 const loadTenantContext = async () => {
   try {
