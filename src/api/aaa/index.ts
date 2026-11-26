@@ -289,3 +289,8 @@ export const replaceRadiusUserPersonalData = (userId: number, data: { phone?: st
   request({ url: `${aaa}/users/${userId}/personal-data`, method: 'put', data, headers: { repeatSubmit: false } });
 export const decryptRadiusUserPersonalData = (userId: number, data: { phone: boolean; email: boolean; idNumber: boolean; fullName: boolean; address: boolean; reason: string }): AxiosPromise<RadiusUserPersonalDataSensitive> =>
   request({ url: `${aaa}/users/${userId}/personal-data/decrypt`, method: 'post', data, headers: { repeatSubmit: false } });
+
+export const createTenant = (data: { tenantCode: string; tenantName: string }): AxiosPromise<TenantSummary> =>
+  request({ url: '/system/tenant', method: 'post', data });
+export const grantTenantAdministrator = (tenantUuid: string, adminUserId: number) =>
+  request({ url: `/system/tenant/${tenantUuid}/administrators/${adminUserId}`, method: 'post' });
