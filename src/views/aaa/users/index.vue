@@ -140,7 +140,16 @@ const identityForm = reactive({ identityType: 'USERNAME' as 'USERNAME' | 'MAC', 
 const credentialMode = ref<'radius' | 'eap'>('radius');
 const credentialPassword = ref('');
 const upstreamForm = reactive({ credentialAlias: 'default', operatorUsername: '', password: '' });
-const transitionOptions = computed(() => statusOptions.map(item => item.value).filter(value => value !== activeUser.value?.status && !['DELETED', 'ANONYMIZED'].includes(value)));
+const transitionOptions = computed(() => {
+  const transitions: Record<string, RadiusUserStatus[]> = {
+    ACTIVE: ['DISABLED', 'LOCKED', 'EXPIRED', 'PENDING_DELETE'],
+    DISABLED: ['ACTIVE', 'LOCKED', 'PENDING_DELETE'],
+    LOCKED: ['ACTIVE', 'DISABLED', 'PENDING_DELETE'],
+    EXPIRED: ['ACTIVE', 'DISABLED', 'PENDING_DELETE'],
+    PENDING_DELETE: ['ACTIVE', 'DISABLED']
+  };
+  return transitions[activeUser.value?.status ?? ''] ?? [];
+});
 
 function statusLabel(status: string) { return statusOptions.find(item => item.value === status)?.label ?? status; }
 function statusTag(status: string) { return status === 'ACTIVE' ? 'success' : status === 'LOCKED' ? 'danger' : status === 'DISABLED' ? 'info' : 'warning'; }
@@ -185,7 +194,7 @@ async function submitUpstream() {
 }
 async function revokeUpstream() {
   if (!activeUser.value) return;
-  await ElMessageBox.confirm('确认撤销此 AAA 用户的 default 上游账号密码绑定？');
+  await ElMessageBox.confirm('确认撤销此 AAA 用户的当前别名上游账号密码绑定？');
   await revokeUpstreamCredential(activeUser.value.id, upstreamForm.credentialAlias || 'default');
   upstreamForm.operatorUsername = ''; upstreamForm.password = ''; upstreamVisible.value = false;
   ElMessage.success('上游账号绑定已撤销');
