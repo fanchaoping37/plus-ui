@@ -72,7 +72,7 @@ import { changeNasStatus, createNasDevice, generateNasRadiusSecret, listNasDevic
 const loading = ref(false);
 const saving = ref(false);
 const rows = ref<NasDevice[]>([]);
-function numericNasId(row: NasDevice) { return Number((row as NasDevice & { id?: number }).id ?? 0); }
+function numericNasId(row?: NasDevice) { return Number(row?.id ?? 0); }
 function canManageNas(row: NasDevice) { return numericNasId(row) > 0; }
 const createVisible = ref(false);
 const secretVisible = ref(false);
