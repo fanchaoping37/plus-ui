@@ -129,8 +129,8 @@
       <el-form label-width="120px">
         <el-form-item label="AAA 用户"><span>{{ activeUser?.userNo }}</span></el-form-item>
         <el-form-item label="凭据别名"><el-input v-model="upstreamForm.credentialAlias" maxlength="64" /></el-form-item>
-        <el-form-item label="运营商账号"><el-input v-model="upstreamForm.operatorUsername" autocomplete="off" /></el-form-item>
-        <el-form-item label="运营商密码"><el-input v-model="upstreamForm.password" type="password" show-password autocomplete="new-password" /></el-form-item>
+        <el-form-item label="运营商账号"><el-input v-model="upstreamForm.operatorUsername" maxlength="253" autocomplete="off" /></el-form-item>
+        <el-form-item label="运营商密码"><el-input v-model="upstreamForm.password" type="password" show-password maxlength="128" autocomplete="new-password" /></el-form-item>
       </el-form>
       <template #footer><el-button @click="upstreamVisible = false">取消</el-button><el-button type="danger" plain @click="revokeUpstream">解绑</el-button><el-button type="primary" :loading="saving" @click="submitUpstream">保存绑定</el-button></template>
     </el-dialog>
@@ -140,7 +140,7 @@
       <el-alert v-else title="此密码用于本地 RADIUS PAP 凭据，与 EAP-MSCHAPv2 NT-Hash 和上游凭据分开保存。" type="info" :closable="false" class="mb-4" />
       <el-form label-width="110px">
         <el-form-item label="AAA 用户"><span>{{ activeUser?.userNo }}</span></el-form-item>
-        <el-form-item label="新密码"><el-input v-model="credentialPassword" type="password" show-password autocomplete="new-password" /></el-form-item>
+        <el-form-item label="新密码"><el-input v-model="credentialPassword" type="password" show-password :maxlength="credentialMode === 'eap' ? 256 : 128" autocomplete="new-password" /></el-form-item>
       </el-form>
       <template #footer><el-button @click="credentialVisible = false">取消</el-button><el-button type="primary" :loading="saving" @click="submitCredential">保存凭据</el-button></template>
     </el-dialog>
@@ -274,7 +274,7 @@ function clearPersonalData() {
 }
 function openUpstream(row: RadiusUser) { activeUser.value = row; Object.assign(upstreamForm, { credentialAlias: 'default', operatorUsername: '', password: '' }); upstreamVisible.value = true; }
 async function submitUpstream() {
-  if (!activeUser.value || !upstreamForm.credentialAlias.trim() || !upstreamForm.operatorUsername || !upstreamForm.password) { ElMessage.warning('请完整填写凭据别名、运营商账号和密码'); return; }
+  if (!activeUser.value || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(upstreamForm.credentialAlias) || !upstreamForm.operatorUsername || !upstreamForm.password) { ElMessage.warning('请填写符合格式的凭据别名、运营商账号和密码'); return; }
   saving.value = true;
   try {
     const payload = { ...upstreamForm };
