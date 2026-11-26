@@ -257,3 +257,26 @@ export const validateUpstreamDynamicAuthorizationClient = (providerId: string, p
   request({ url: `${aaa}/providers/${providerId}/versions/${providerVersion}/dynamic-authorization-clients/${clientId}/validate`, method: 'post' });
 export const listUpstreamDynamicAuthorizationClientAudit = (clientId: number, limit = 100) =>
   request({ url: `${aaa}/audit/upstream-dynamic-authorization-clients/${clientId}`, method: 'get', params: { limit } });
+
+export interface RadiusUserPersonalDataPresence {
+  userId: number;
+  phonePresent: boolean;
+  emailPresent: boolean;
+  idNumberPresent: boolean;
+  fullNamePresent: boolean;
+  addressPresent: boolean;
+}
+export interface RadiusUserPersonalDataSensitive {
+  userId: number;
+  phone?: string;
+  email?: string;
+  idNumber?: string;
+  fullName?: string;
+  address?: string;
+}
+export const getRadiusUserPersonalData = (userId: number): AxiosPromise<RadiusUserPersonalDataPresence> =>
+  request({ url: `${aaa}/users/${userId}/personal-data`, method: 'get' });
+export const replaceRadiusUserPersonalData = (userId: number, data: { phone?: string; email?: string; idNumber?: string; fullName?: string; address?: string; reason: string }) =>
+  request({ url: `${aaa}/users/${userId}/personal-data`, method: 'put', data, headers: { repeatSubmit: false } });
+export const decryptRadiusUserPersonalData = (userId: number, data: { phone: boolean; email: boolean; idNumber: boolean; fullName: boolean; address: boolean; reason: string }): AxiosPromise<RadiusUserPersonalDataSensitive> =>
+  request({ url: `${aaa}/users/${userId}/personal-data/decrypt`, method: 'post', data, headers: { repeatSubmit: false } });
