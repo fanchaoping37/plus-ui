@@ -28,6 +28,7 @@
         v-model="selectedTenantUuid"
         size="small"
         class="tenant-context-select"
+        placeholder="选择租户"
         :title="activeTenantName"
         @change="handleTenantSwitch"
       >
@@ -137,13 +138,22 @@ const activeTenantName = computed(() => tenantOptions.value.find(item => item.te
 
 const loadTenantContext = async () => {
   try {
-    const [listResult, currentResult] = await Promise.all([listTenants(), getTenantContext()]);
+    const listResult = await listTenants();
     tenantOptions.value = listResult.data ?? [];
-    activeTenantUuid.value = currentResult.data?.tenantUuid ?? '';
-    selectedTenantUuid.value = activeTenantUuid.value;
+    try {
+      const currentResult = await getTenantContext();
+      activeTenantUuid.value = currentResult.data?.tenantUuid ?? '';
+      selectedTenantUuid.value = activeTenantUuid.value;
+    } catch {
+      // Keep the accessible tenant list visible so an administrator can select
+      // a tenant even when the session has not yet established a context.
+      activeTenantUuid.value = '';
+      selectedTenantUuid.value = '';
+    }
   } catch {
     tenantOptions.value = [];
     activeTenantUuid.value = '';
+    selectedTenantUuid.value = '';
   }
 };
 const handleTenantSwitch = async (tenantUuid: string) => {
