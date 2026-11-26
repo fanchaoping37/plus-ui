@@ -138,20 +138,19 @@ export const usePermissionStore = defineStore('permission', () => {
 });
 
 // 动态路由遍历，验证是否具备权限
-export const filterDynamicRoutes = (routes: RouteRecordRaw[]) => {
-  const res: RouteRecordRaw[] = [];
+export const filterDynamicRoutes = (routes: RouteRecordRaw[]): RouteRecordRaw[] => {
+  const result: RouteRecordRaw[] = [];
   routes.forEach(route => {
-    if (route.permissions) {
-      if (auth.hasPermiOr(route.permissions)) {
-        res.push(route);
-      }
-    } else if (route.roles) {
-      if (auth.hasRoleOr(route.roles)) {
-        res.push(route);
-      }
-    }
+    const children = route.children ? filterDynamicRoutes(route.children) : undefined;
+    const ownPermission = route.permissions ? auth.hasPermiOr(route.permissions) : undefined;
+    const ownRole = route.roles ? auth.hasRoleOr(route.roles) : undefined;
+    const ownAllowed = ownPermission ?? ownRole ?? false;
+    const allowed = route.children
+      ? ownAllowed || Boolean(children?.length)
+      : ownPermission ?? ownRole ?? true;
+    if (allowed) result.push({ ...route, ...(route.children ? { children } : {}) });
   });
-  return res;
+  return result;
 };
 
 export const loadView = (view: any, name: string) => {
