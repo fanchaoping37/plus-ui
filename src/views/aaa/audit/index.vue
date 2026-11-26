@@ -55,7 +55,7 @@ async function refresh() {
 }
 async function showCoaHistory(row: any) { const res = await getCoaTaskReviewHistory(row.id); reviewHistory.value = res.data ?? []; historyVisible.value = true; }
 async function showDynamicHistory(row: any) { const res = await getDynamicAuthorizationReviewHistory(row.id); reviewHistory.value = res.data ?? []; historyVisible.value = true; }
-function openReview(kind: 'coa' | 'dynamic', id: number) { reviewTarget.value = { kind, id }; Object.assign(reviewForm, { reviewUuid: crypto.randomUUID(), disposition: 'CONFIRMED', note: '', evidenceReference: '' }); reviewVisible.value = true; }
+function openReview(kind: 'coa' | 'dynamic', id: number) { reviewTarget.value = { kind, id }; Object.assign(reviewForm, { reviewUuid: crypto.randomUUID(), disposition: 'ACKNOWLEDGED', note: '', evidenceReference: '' }); reviewVisible.value = true; }
 function reviewCoa(row: any) { openReview('coa', row.id); }
 function reviewDynamic(row: any) { openReview('dynamic', row.id); }
 async function submitReview() {
