@@ -1,6 +1,7 @@
 <template>
   <div class="p-2 app-container">
     <el-alert title="NAS 是 RADIUS 报文来源的可信配置对象。Shared Secret 仅在生成或轮换成功时一次性显示，普通列表不会返回明文。" type="info" :closable="false" class="mb-3" />
+    <el-alert title="集成契约待后端补齐：当前 NAS 列表只返回 businessId(UUID)，而状态/地址/密钥接口要求数值型 nasDeviceId；相关操作在列表响应补齐 id 前保持禁用，不会使用 UUID 冒充数值 ID。" type="warning" :closable="false" class="mb-3" />
     <el-card shadow="never">
       <template #header>
         <div class="flex items-center justify-between"><div><strong>NAS 设备</strong><div class="text-xs text-gray-500 mt-1">按租户管理 NAS Identity、IPv4/IPv6 来源地址、认证安全策略</div></div>
