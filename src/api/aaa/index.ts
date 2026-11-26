@@ -61,6 +61,14 @@ export interface NasDevice {
   requireAccessMessageAuthenticator: boolean;
 }
 
+export interface NasPortalProfiles {
+  vendorProfileId: string;
+  vendorProfileVersion: string;
+  clientMessageProfileId: string;
+  clientMessageProfileVersion: string;
+  macTriggerMessageProfileId?: string;
+  macTriggerMessageProfileVersion?: string;
+}
 export interface NasDeviceCreate {
   identity: string;
   displayName: string;
@@ -68,6 +76,7 @@ export interface NasDeviceCreate {
   modelId?: string;
   accountingInterimIntervalMinutes?: number;
   addresses: NasAddress[];
+  portalProfiles?: NasPortalProfiles;
   requireAccessMessageAuthenticator: boolean;
 }
 
