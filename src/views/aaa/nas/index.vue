@@ -99,7 +99,10 @@ const formRef = ref();
 const initialForm = (): NasDeviceCreate => ({ identity: '', displayName: '', vendorId: '', modelId: '', accountingInterimIntervalMinutes: 5, requireAccessMessageAuthenticator: true, addresses: [{ endpointName: 'access', ipAddress: '', enabled: true }] });
 const form = reactive<NasDeviceCreate>(initialForm());
 const rules = { identity: [{ required: true, message: '请输入 NAS Identity', trigger: 'blur' }], displayName: [{ required: true, message: '请输入名称', trigger: 'blur' }], vendorId: [{ required: true, message: '请输入 IANA Vendor ID', trigger: 'blur' }] };
-function formatAddress(bytes: number[]) {
+function formatAddress(value: number[] | string) {
+  const bytes = typeof value === 'string'
+    ? Array.from(atob(value), character => character.charCodeAt(0))
+    : value;
   if (bytes.length === 4) return bytes.join('.');
   if (bytes.length !== 16) return bytes.join('.');
   const parts: string[] = [];
