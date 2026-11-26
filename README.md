@@ -25,6 +25,7 @@ pnpm dev
 
 ## AAA 功能
 
+- 多租户：租户上下文切换、超级管理员创建租户与授权管理员
 - AAA 用户：独立用户主体、状态、身份映射、RADIUS PAP 凭据、PEAP 内层 EAP-MSCHAPv2 凭据
 - NAS：NAS Identity、IPv4/IPv6 来源地址、Vendor PEN、Message-Authenticator 与 RADIUS Shared Secret
 - 授权条件：用户组、用户标签、终端设备
