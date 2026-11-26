@@ -39,6 +39,7 @@
             <el-button v-hasPermi="['aaa:user:identity:bind']" link type="primary" @click="openIdentity(row)">身份绑定</el-button>
             <el-button v-hasPermi="['aaa:user:credential:reset']" link type="primary" @click="openCredential(row, 'radius')">RADIUS 密码</el-button>
             <el-button v-hasPermi="['aaa:user:credential:reset']" link type="primary" @click="openCredential(row, 'eap')">EAP 密码</el-button>
+            <el-button v-hasPermi="['aaa:user:upstream-credential:reset']" link type="primary" @click="openUpstream(row)">上游账号</el-button>
             <el-button v-hasPermi="['aaa:user:edit']" link type="warning" @click="openStatus(row)">状态</el-button>
           </template>
         </el-table-column>
@@ -80,6 +81,17 @@
       <template #footer><el-button @click="identityVisible = false">取消</el-button><el-button type="primary" @click="submitIdentity">绑定</el-button></template>
     </el-dialog>
 
+    <el-dialog v-model="upstreamVisible" title="设置独立上游运营商账号" width="560px" destroy-on-close>
+      <el-alert title="上游账号和密码独立加密保存，不复用 NAS Shared Secret、RADIUS 本地密码或 EAP NT-Hash。" type="warning" :closable="false" class="mb-4" />
+      <el-form label-width="120px">
+        <el-form-item label="AAA 用户"><span>{{ activeUser?.userNo }}</span></el-form-item>
+        <el-form-item label="凭据别名"><el-input v-model="upstreamForm.credentialAlias" maxlength="64" /></el-form-item>
+        <el-form-item label="运营商账号"><el-input v-model="upstreamForm.operatorUsername" autocomplete="off" /></el-form-item>
+        <el-form-item label="运营商密码"><el-input v-model="upstreamForm.password" type="password" show-password autocomplete="new-password" /></el-form-item>
+      </el-form>
+      <template #footer><el-button @click="upstreamVisible = false">取消</el-button><el-button type="danger" plain @click="revokeUpstream">解绑</el-button><el-button type="primary" :loading="saving" @click="submitUpstream">保存绑定</el-button></template>
+    </el-dialog>
+
     <el-dialog v-model="credentialVisible" :title="credentialMode === 'eap' ? '设置 EAP-MSCHAPv2 密码' : '设置 RADIUS PAP 密码'" width="520px" destroy-on-close>
       <el-alert v-if="credentialMode === 'eap'" title="此密码专用于 PEAP 内层 EAP-MSCHAPv2，独立派生 NT-Hash；不等于管理后台密码或上游运营商密码。" type="warning" :closable="false" class="mb-4" />
       <el-alert v-else title="此密码用于本地 RADIUS PAP 凭据，与 EAP-MSCHAPv2 NT-Hash 和上游凭据分开保存。" type="info" :closable="false" class="mb-4" />
@@ -97,7 +109,7 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { ElMessage } from 'element-plus';
 import {
   bindRadiusIdentity, changeRadiusUserStatus, createRadiusUser, listRadiusUsers,
-  replaceEapMschapv2Password, replaceRadiusUserPassword,
+  replaceEapMschapv2Password, replaceRadiusUserPassword, replaceUpstreamCredential, revokeUpstreamCredential,
   type RadiusUser, type RadiusUserCreate, type RadiusUserStatus
 } from '@/api/aaa';
 
@@ -114,6 +126,7 @@ const createVisible = ref(false);
 const statusVisible = ref(false);
 const identityVisible = ref(false);
 const credentialVisible = ref(false);
+const upstreamVisible = ref(false);
 const activeUser = ref<RadiusUser>();
 const createFormRef = ref();
 const createForm = reactive<RadiusUserCreate>({ userNo: '', displayName: '', userType: 'CAMPUS', reason: '' });
@@ -126,6 +139,7 @@ const statusForm = reactive<{ status: RadiusUserStatus; reason: string }>({ stat
 const identityForm = reactive({ identityType: 'USERNAME' as 'USERNAME' | 'MAC', scope: 'GLOBAL' as 'GLOBAL' | 'NAS', identity: '', nasIdentity: '' });
 const credentialMode = ref<'radius' | 'eap'>('radius');
 const credentialPassword = ref('');
+const upstreamForm = reactive({ credentialAlias: 'default', operatorUsername: '', password: '' });
 const transitionOptions = computed(() => statusOptions.map(item => item.value).filter(value => value !== activeUser.value?.status && !['DELETED', 'ANONYMIZED'].includes(value)));
 
 function statusLabel(status: string) { return statusOptions.find(item => item.value === status)?.label ?? status; }
@@ -157,6 +171,24 @@ async function submitIdentity() {
   if (!activeUser.value || !identityForm.identity.trim() || (identityForm.scope === 'NAS' && !identityForm.nasIdentity.trim())) { ElMessage.warning('请完整填写身份映射'); return; }
   await bindRadiusIdentity(activeUser.value.id, { ...identityForm });
   ElMessage.success('身份绑定已提交'); identityVisible.value = false;
+}
+function openUpstream(row: RadiusUser) { activeUser.value = row; Object.assign(upstreamForm, { credentialAlias: 'default', operatorUsername: '', password: '' }); upstreamVisible.value = true; }
+async function submitUpstream() {
+  if (!activeUser.value || !upstreamForm.credentialAlias.trim() || !upstreamForm.operatorUsername || !upstreamForm.password) { ElMessage.warning('请完整填写凭据别名、运营商账号和密码'); return; }
+  saving.value = true;
+  try {
+    const payload = { ...upstreamForm };
+    upstreamForm.operatorUsername = ''; upstreamForm.password = '';
+    await replaceUpstreamCredential(activeUser.value.id, payload);
+    ElMessage.success('上游账号密码绑定已更新'); upstreamVisible.value = false;
+  } finally { upstreamForm.operatorUsername = ''; upstreamForm.password = ''; saving.value = false; }
+}
+async function revokeUpstream() {
+  if (!activeUser.value) return;
+  await ElMessageBox.confirm('确认撤销此 AAA 用户的 default 上游账号密码绑定？');
+  await revokeUpstreamCredential(activeUser.value.id, upstreamForm.credentialAlias || 'default');
+  upstreamForm.operatorUsername = ''; upstreamForm.password = ''; upstreamVisible.value = false;
+  ElMessage.success('上游账号绑定已撤销');
 }
 function openCredential(row: RadiusUser, mode: 'radius' | 'eap') { activeUser.value = row; credentialMode.value = mode; credentialPassword.value = ''; credentialVisible.value = true; }
 async function submitCredential() {
