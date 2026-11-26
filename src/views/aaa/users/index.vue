@@ -53,8 +53,8 @@
         <el-form-item label="用户账号" prop="userNo"><el-input v-model="createForm.userNo" maxlength="128" /></el-form-item>
         <el-form-item label="显示名称"><el-input v-model="createForm.displayName" maxlength="128" /></el-form-item>
         <el-form-item label="用户类型" prop="userType"><el-input v-model="createForm.userType" maxlength="32" placeholder="例如 CAMPUS / OPERATOR" /></el-form-item>
-        <el-form-item label="生效时间"><el-date-picker v-model="createForm.validFrom" type="datetime" value-format="YYYY-MM-DDTHH:mm:ss[Z]" /></el-form-item>
-        <el-form-item label="失效时间"><el-date-picker v-model="createForm.validUntil" type="datetime" value-format="YYYY-MM-DDTHH:mm:ss[Z]" /></el-form-item>
+        <el-form-item label="生效时间"><el-date-picker v-model="createForm.validFrom" type="datetime" value-format="YYYY-MM-DDTHH:mm:ssZ" /></el-form-item>
+        <el-form-item label="失效时间"><el-date-picker v-model="createForm.validUntil" type="datetime" value-format="YYYY-MM-DDTHH:mm:ssZ" /></el-form-item>
         <el-form-item label="创建原因" prop="reason"><el-input v-model="createForm.reason" type="textarea" maxlength="512" /></el-form-item>
       </el-form>
       <template #footer><el-button @click="createVisible = false">取消</el-button><el-button type="primary" :loading="saving" @click="submitCreate">创建</el-button></template>
