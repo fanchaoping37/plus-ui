@@ -25,7 +25,7 @@
     <div class="right-menu flex align-center">
       <el-select
         v-if="tenantOptions.length"
-        v-model="activeTenantUuid"
+        v-model="selectedTenantUuid"
         size="small"
         class="tenant-context-select"
         :title="activeTenantName"
@@ -132,6 +132,7 @@ const showLogo = computed(() => settingsStore.sidebarLogo);
 const displayName = computed(() => userStore.nickname || '管理员');
 const tenantOptions = ref<TenantSummary[]>([]);
 const activeTenantUuid = ref('');
+const selectedTenantUuid = ref('');
 const activeTenantName = computed(() => tenantOptions.value.find(item => item.tenantUuid === activeTenantUuid.value)?.tenantName ?? '');
 
 const loadTenantContext = async () => {
@@ -139,6 +140,7 @@ const loadTenantContext = async () => {
     const [listResult, currentResult] = await Promise.all([listTenants(), getTenantContext()]);
     tenantOptions.value = listResult.data ?? [];
     activeTenantUuid.value = currentResult.data?.tenantUuid ?? '';
+    selectedTenantUuid.value = activeTenantUuid.value;
   } catch {
     tenantOptions.value = [];
     activeTenantUuid.value = '';
@@ -146,9 +148,15 @@ const loadTenantContext = async () => {
 };
 const handleTenantSwitch = async (tenantUuid: string) => {
   if (!tenantUuid || tenantUuid === activeTenantUuid.value) return;
-  await switchTenantContext(tenantUuid);
-  ElMessage.success('租户上下文已切换，正在刷新权限和菜单');
-  window.location.reload();
+  try {
+    await switchTenantContext(tenantUuid);
+    activeTenantUuid.value = tenantUuid;
+    ElMessage.success('租户上下文已切换，正在刷新权限和菜单');
+    window.location.reload();
+  } catch (error) {
+    selectedTenantUuid.value = activeTenantUuid.value;
+    throw error;
+  }
 };
 onMounted(loadTenantContext);
 
